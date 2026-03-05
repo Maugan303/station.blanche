@@ -30,4 +30,21 @@ else
     done
 fi
 
+# Si aucun périphérique n'est trouvé, on affiche une erreur
+if [[ -z "$DEVICE" ]]; then
+    echo "Aucune clé USB détectée. Branchez une clé et relancez le script."
+    exit 1
+fi
+
+echo "Clé USB détectée : $DEVICE"
+
+MOUNTPOINT="/media/$DEVICE"
+ 
+# Création des dossiers nécessaires
+mkdir -p "$LOGDIR" "$MOUNTPOINT" "$QUARANTAINE"
+ 
+# Horodatage
+TS=$(date +"%Y-%m-%d %H:%M:%S")
+TS_FILE=$(date +%Y%m%d_%H%M%S)
+
 exit 0
