@@ -47,4 +47,9 @@ mkdir -p "$LOGDIR" "$MOUNTPOINT" "$QUARANTAINE"
 TS=$(date +"%Y-%m-%d %H:%M:%S")
 TS_FILE=$(date +%Y%m%d_%H%M%S)
 
+# démontage uniquement si le point de montage est actif
+if mountpoint -q "$MOUNTPOINT"; then
+    umount "$MOUNTPOINT"
+fi
+
 exit 0
