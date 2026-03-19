@@ -47,6 +47,25 @@ mkdir -p "$LOGDIR" "$MOUNTPOINT" "$QUARANTAINE"
 TS=$(date +"%Y-%m-%d %H:%M:%S")
 TS_FILE=$(date +%Y%m%d_%H%M%S)
 
+# 1) LOG_USB.LOG
+ 
+USB_COUNTER_FILE="$LOGDIR/usb_counter.txt"
+LOG_USB="$LOGDIR/log_usb.log"
+ 
+ 
+if [[ ! -f "$USB_COUNTER_FILE" ]]; then
+    echo 0 > "$USB_COUNTER_FILE"
+fi
+
+LAST_USB=$(cat "$USB_COUNTER_FILE")
+NEXT_USB=$((LAST_USB + 1))
+echo "$NEXT_USB" > "$USB_COUNTER_FILE"
+ID_USB="$NEXT_USB"
+ 
+NOM_USB="$DEVICE"
+FILESYSTEM=$(lsblk -no FSTYPE "/dev/$DEVICE" 2>/dev/null || echo "inconnu")
+DATE_INSERTION="$TS"
+
 # démontage uniquement si le point de montage est actif
 if mountpoint -q "$MOUNTPOINT"; then
     umount "$MOUNTPOINT"
