@@ -66,6 +66,48 @@ NOM_USB="$DEVICE"
 FILESYSTEM=$(lsblk -no FSTYPE "/dev/$DEVICE" 2>/dev/null || echo "inconnu")
 DATE_INSERTION="$TS"
 
+# 2) LOG_SCAN.LOG
+ 
+SCAN_COUNTER_FILE="$LOGDIR/scan_counter.txt"
+LOG_SCAN="$LOGDIR/log_scan.log"
+ 
+if [[ ! -f "$SCAN_COUNTER_FILE" ]]; then
+    echo 0 > "$SCAN_COUNTER_FILE"
+fi
+ 
+LAST_SCAN=$(cat "$SCAN_COUNTER_FILE")
+NEXT_SCAN=$((LAST_SCAN + 1))
+echo "$NEXT_SCAN" > "$SCAN_COUNTER_FILE"
+ID_SCAN="$NEXT_SCAN"
+ 
+ETAT_SCAN="OK"
+ 
+# Montage de la clé USB (si pas déjà montée)
+if ! mountpoint -q "$MOUNTPOINT"; then
+ 
+    mount "/dev/$DEVICE" "$MOUNTPOINT"
+    
+    if [[ $? -ne 0 ]]; then
+        notify "Erreur" "Impossible de monter /dev/$DEVICE"
+        ETAT_SCAN="ERREUR_MONTAGE"
+        echo "{\"id_scan\": $ID_SCAN, \"id_usb\": $ID_USB, \"date_scan\": \"$TS\", \"nb_fichier\": 0, \"etat_scan\": \"$ETAT_SCAN\", \"infecte\": 0, \"duree\": \"0s\"}" >> "$LOG_SCAN"
+        exit 1
+    fi
+fi
+ 
+# Volume utilisé sur la clé
+TAILLE=$(df -k "$MOUNTPOINT" 2>/dev/null | awk 'NR==2 {printf "%d", $3}' || echo "inconnu")
+ 
+# Écriture du log USB
+echo "{\"id_usb\": $ID_USB, \"nom\": \"$NOM_USB\", \"filesystem\": \"$FILESYSTEM\", \"taille\": \"$TAILLE\", \"date_insertion\": \"$DATE_INSERTION\"}" >> "$LOG_USB"
+ 
+# Fichier log brut ClamAV
+CLAMAV_RAW="$LOGDIR/clamav_raw_${TS_FILE}.log"
+
+# Timer
+START_TIME=$(date +%s)
+ 
+
 # démontage uniquement si le point de montage est actif
 if mountpoint -q "$MOUNTPOINT"; then
     umount "$MOUNTPOINT"
