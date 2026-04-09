@@ -107,6 +107,45 @@ CLAMAV_RAW="$LOGDIR/clamav_raw_${TS_FILE}.log"
 # Timer
 START_TIME=$(date +%s)
  
+# Scan ClamAV
+clamscan \
+    --recursive \
+    --move="$QUARANTAINE" \
+    --log="$CLAMAV_RAW" \
+    --allmatch \
+    --detect-pua=yes \
+    --max-scansize=100M \
+    --max-filesize=100M \
+    --max-recursion=20 \
+    --max-files=100000 \
+    --max-dir-recursion=20 \
+    --heuristic-scan-precedence=yes \
+    --cross-fs=yes \
+    --verbose \
+    "$MOUNTPOINT"
+ 
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+ 
+# Extraction des résultats ClamAV
+NB_FICHIER=$(grep "Scanned files:" "$CLAMAV_RAW" 2>/dev/null | awk '{print $3}')
+INFECTE=$(grep "Infected files:" "$CLAMAV_RAW" 2>/dev/null | awk '{print $3}')
+ 
+# valeurs par défaut si grep ne trouve rien
+NB_FICHIER=${NB_FICHIER:-0}
+INFECTE=${INFECTE:-0}
+ 
+if [[ "$NB_FICHIER" -eq 0 ]] && ! grep -q "Scanned files:" "$CLAMAV_RAW" 2>/dev/null; then
+    ETAT_SCAN="ERREUR_SCAN"
+fi
+ 
+if [[ "$INFECTE" -gt 0 ]]; then
+    ETAT_SCAN="INFECTE"
+fi
+ 
+# Écriture du log scan
+echo "{\"id_scan\": $ID_SCAN, \"id_usb\": $ID_USB, \"date_scan\": \"$TS\", \"nb_fichier\": $NB_FICHIER, \"etat_scan\": \"$ETAT_SCAN\", \"infecte\": $INFECTE, \"duree\": \"${DURATION}s\"}" >> "$LOG_SCAN"
+ 
 
 # démontage uniquement si le point de montage est actif
 if mountpoint -q "$MOUNTPOINT"; then
