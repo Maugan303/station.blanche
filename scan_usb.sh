@@ -146,6 +146,60 @@ fi
 # Écriture du log scan
 echo "{\"id_scan\": $ID_SCAN, \"id_usb\": $ID_USB, \"date_scan\": \"$TS\", \"nb_fichier\": $NB_FICHIER, \"etat_scan\": \"$ETAT_SCAN\", \"infecte\": $INFECTE, \"duree\": \"${DURATION}s\"}" >> "$LOG_SCAN"
  
+ # 3) LOG_FICHIER.LOG
+ 
+# Fichier texte servant de compteur auto-incrémenté pour les IDs fichiers
+FILE_COUNTER_FILE="$LOGDIR/file_counter.txt"
+
+# Fichier de sortie : une ligne JSON par fichier analysé
+LOG_FICHIER="$LOGDIR/log_fichier.log"
+
+# Initialise le compteur à 0 s'il n'existe pas encore
+if [[ ! -f "$FILE_COUNTER_FILE" ]]; then
+    echo 0 > "$FILE_COUNTER_FILE"
+fi
+
+# Vérifie que le log brut ClamAV est bien présent avant de le traiter
+if [[ ! -f "$CLAMAV_RAW" ]]; then
+    echo "AVERTISSEMENT: log ClamAV introuvable : $CLAMAV_RAW"
+else
+    sed -i 's/\r//' "$CLAMAV_RAW"
+ 
+    # Lecture ligne par ligne du log ClamAV brut
+    while IFS= read -r line; do
+
+        if [[ "$line" == "Scanning "* ]]; then
+            FILE_PATH="${line#Scanning }"
+            [[ -d "$FILE_PATH" ]] && continue
+            STATUT="non_infecte"
+        elif [[ "$line" == /* ]] && echo "$line" | grep -qE ' FOUND$'; then
+            # FIX: sed plutôt que rev/cut pour les chemins contenant ":"
+            FILE_PATH=$(echo "$line" | sed 's/:[^:]*$//' | sed 's/[[:space:]]*$//')
+            STATUT="infecte"
+        else
+            continue
+        fi
+ 
+        FILE_NAME=$(basename "$FILE_PATH")
+        
+        
+        if [[ -f "$FILE_PATH" ]]; then
+            FILE_SIZE=$(stat -c%s "$FILE_PATH" 2>/dev/null || echo 0)
+        else
+            FILE_SIZE=$(stat -c%s "$QUARANTAINE/$FILE_NAME" 2>/dev/null || echo 0)
+        fi
+
+        # Incrémentation du compteur d'ID
+        LAST_FILE=$(cat "$FILE_COUNTER_FILE")       # Lit l'ID courant
+        NEXT_FILE=$((LAST_FILE + 1))                # Calcule le prochain ID
+        echo "$NEXT_FILE" > "$FILE_COUNTER_FILE"    # Persiste le nouvel ID
+
+ 
+        # Écrit une ligne JSON dans le log fichier avec toutes les données
+        echo "{\"id_fichier\": $NEXT_FILE, \"id_scan\": $ID_SCAN, \"nom\": \"$FILE_NAME\", \"chemin\": \"$FILE_PATH\", \"taille\": $FILE_SIZE, \"statut\": \"$STATUT\"}" >> "$LOG_FICHIER"
+ 
+    done < "$CLAMAV_RAW"
+fi
 
 # démontage uniquement si le point de montage est actif
 if mountpoint -q "$MOUNTPOINT"; then
