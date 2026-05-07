@@ -201,6 +201,72 @@ else
     done < "$CLAMAV_RAW"
 fi
 
+# Importation des logs dans la BDD
+echo "Importation des LOGS"
+ 
+curl -s -X POST https://[Log in to view URL]:5000/api/import-logs \
+    -H "Content-Type: application/json" \
+    -d '{"type":"usb"}'
+ 
+curl -s -X POST https://[Log in to view URL]:5000/import-logs \
+    -H "Content-Type: application/json" \
+    -d '{"type":"scan"}'
+ 
+curl -s -X POST https://[Log in to view URL]:5000/api/import-logs \
+    -H "Content-Type: application/json" \
+    -d '{"type":"file"}'
+ 
+# GENERATION DU RAPPORT TEXTE
+ 
+RAPPORT_DIR="/home/$STATION_USER/rapports"
+mkdir -p "$RAPPORT_DIR"
+RAPPORT="$RAPPORT_DIR/rapport_scan_${TS_FILE}.txt"
+ 
+{
+    echo ""
+    echo " RAPPORT DE SCAN ANTIVIRUS"
+    echo ""
+    echo ""
+    echo "Date du scan : $TS"
+    echo "ID du scan : $ID_SCAN"
+    echo "ID USB : $ID_USB"
+    echo "Clé USB détectée : $DEVICE"
+    echo "Système de fichiers : $FILESYSTEM"
+    echo "Taille utilisée : ${TAILLE} Ko"
+    echo ""
+    echo ""
+    echo " RESULTATS DU SCAN"
+    echo ""
+    echo ""
+    echo "Etat du scan : $ETAT_SCAN"
+    echo "Fichiers scannés : $NB_FICHIER"
+    echo "Fichiers infectés : $INFECTE"
+    echo "Durée du scan : ${DURATION} secondes"
+    echo ""
+ 
+    if [[ "$INFECTE" -gt 0 ]]; then
+        echo ""
+        echo " FICHIERS INFECTES DETECTES"
+        echo ""
+        grep "FOUND" "$CLAMAV_RAW"
+        echo ""
+    fi
+ 
+    echo ""
+    echo " DETAILS DU SCAN"
+    echo ""
+    echo ""
+    cat "$CLAMAV_RAW"
+    echo ""
+    echo ""
+    echo " FIN DU RAPPORT"
+    echo ""
+ 
+} > "$RAPPORT"
+ 
+echo "Rapport généré : $RAPPORT"
+
+
 # démontage uniquement si le point de montage est actif
 if mountpoint -q "$MOUNTPOINT"; then
     umount "$MOUNTPOINT"
