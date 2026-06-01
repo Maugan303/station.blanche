@@ -84,11 +84,17 @@ ETAT_SCAN="OK"
  
 # Montage de la clé USB (si pas déjà montée)
 if ! mountpoint -q "$MOUNTPOINT"; then
- 
-    mount "/dev/$DEVICE" "$MOUNTPOINT"
-    
+
+    echo "Tentative de montage de /dev/$DEVICE ($FILESYSTEM)"
+
+    if [[ "$FILESYSTEM" == "ntfs" ]]; then
+        mount -t ntfs "/dev/$DEVICE" "$MOUNTPOINT"
+    else
+        mount "/dev/$DEVICE" "$MOUNTPOINT"
+    fi
+
     if [[ $? -ne 0 ]]; then
-        notify "Erreur" "Impossible de monter /dev/$DEVICE"
+        echo "Erreur montage de /dev/$DEVICE"
         ETAT_SCAN="ERREUR_MONTAGE"
         echo "{\"id_scan\": $ID_SCAN, \"id_usb\": $ID_USB, \"date_scan\": \"$TS\", \"nb_fichier\": 0, \"etat_scan\": \"$ETAT_SCAN\", \"infecte\": 0, \"duree\": \"0s\"}" >> "$LOG_SCAN"
         exit 1
