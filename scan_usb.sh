@@ -210,15 +210,15 @@ fi
 # Importation des logs dans la BDD
 echo "Importation des LOGS"
  
-curl -s -X POST https://[Log in to view URL]:5000/api/import-logs \
+curl -s -X POST https://192.168.2.113/api/import-logs \
     -H "Content-Type: application/json" \
     -d '{"type":"usb"}'
  
-curl -s -X POST https://[Log in to view URL]:5000/import-logs \
+curl -s -X POST https://192.168.2.113/import-logs \
     -H "Content-Type: application/json" \
     -d '{"type":"scan"}'
  
-curl -s -X POST https://[Log in to view URL]:5000/api/import-logs \
+curl -s -X POST https://192.168.2.113/api/import-logs \
     -H "Content-Type: application/json" \
     -d '{"type":"file"}'
  
